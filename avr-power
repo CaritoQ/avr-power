@@ -1,53 +1,69 @@
 /* cada 5 segundos el sistema desactiva el conversor análogo digital, 
  *cada 8 segundos la comunicación serial y cada 12 segundos un desactivación total 
  */
-#include<avr/wdt.h>
-#include<MsTimer2.h>
+#include <avr/wdt.h>
+#include <avr/power.h>
+#include <TimerOne.h>
+#include <EEPROM.h>
+#include <LiquidCrystal.h>
+int dir = EEPROM.read(0);
 
-String d="";
-int s=0;
+int c = 0;
+int disp = 5;
+int ingreso;
+
+LiquidCrystal lcd(13, 12, 11, 10, 9, 8);
+
 void setup() {
-  wdt_disable();
-  MsTimer2::set(1000,tiempo);
-  MsTimer2::stop();
-  Serial.begin(9600);
-  Serial.println("Ingresar una letra: ");  
+  Timer1.initialize(1000000);
+  Timer1.attachInterrupt(conteo);            
+  power_all_enable();                      
+  lcd.begin(16, 2);
+  dir = 0;
+  
 }
 
 void loop() {
-  
-  if(Serial.available()>0){
-  d=Serial.readString();
-  Serial.println(" ");
+  Serial.println(dir);
+  lcd.setCursor(12, 1);
+  lcd.print("Duración:" + String(c));
+  dato = analogRead(0);
+  lcd.setCursor(0, 1);
+  lcd.print(ingreso);
+
+  if (c == 5) {                          
+    dir = dir + 1;
+    lcd.setCursor(0, 0);
+    lcd.print("COAD APAGADO");
+    power_adc_disable();
   }
-  
-   if (d=="A"){
-      Serial.println("1S");
-      MsTimer2::start();
-      wdt_enable(WDTO_1S);
-      d="";
-   }
-   if (d=="B"){
-      Serial.println("2S");
-      MsTimer2::start();
-      wdt_enable(WDTO_2S);
-      d="";
-   }
-   if (d=="C"){
-      Serial.println("4S");
-      MsTimer2::start();
-      wdt_enable(WDTO_4S);
-      d="";
-   }
-      if (datos=="D"){
-      Serial.println("8S");
-      MsTimer2::start();
-      wdt_enable(WDTO_8S);
-      d="";
-    }
+  if (c == 8) {                          l
+    lcd.setCursor(0, 0);
+    lcd.print("                     ");
+    lcd.setCursor(0, 0);
+    lcd.print("COM APAGADA");
+    power_spi_disable();
+  }
+  if (c == 12) {                        
+    lcd.setCursor(0, 0);
+    lcd.print("                    ");
+    lcd.setCursor(0, 0);
+    lcd.print("SIST APAGADO");
+    power_all_disable();
+  }
+  if (EEPROM.read(0) > 12) {
+    dir = 0;
+    power_all_enable();
+    EEPROM.write(0, dir);
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("REINICIAR");
+    digitalWrite(disp, HIGH);
+    delay(10);
+    wdt_enable(WDTO_1S);
+  }  
 }
 
-void tiempo(){
-  s++;
-    Serial.println(s);
-  }
+void conteo() {
+  c++;
+}
